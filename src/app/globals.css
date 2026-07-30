@@ -2,25 +2,117 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #222222;
 }
 
-@theme inline {
+/* Design tokens from the DS Library Figma (Color 2025 palette).
+   Family names match the Figma swatch names; the app's neutrals map to
+   Bluegrey and its primary to Blue. */
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-blue-50: #f5faff;
+  --color-blue-75: #e7f3ff;
+  --color-blue-100: #b3d9ff;
+  --color-blue-200: #8ec7ff;
+  --color-blue-300: #5badff;
+  --color-blue-400: #3b9dff;
+  --color-blue-500: #0a85ff;
+  --color-blue-600: #0474da;
+  --color-blue-700: #075eb5;
+  --color-blue-800: #06498c;
+  --color-blue-900: #04386b;
+
+  --color-bluegrey-50: #ffffff;
+  --color-bluegrey-75: #fafbfc;
+  --color-bluegrey-100: #f1f3f5;
+  --color-bluegrey-200: #e1e6eb;
+  --color-bluegrey-300: #c9d0d6;
+  --color-bluegrey-400: #9aa6b2;
+  --color-bluegrey-500: #687888;
+  --color-bluegrey-600: #5f6e7d;
+  --color-bluegrey-700: #515f6b;
+  --color-bluegrey-800: #404a54;
+  --color-bluegrey-900: #303840;
+
+  --color-grey-50: #ffffff;
+  --color-grey-75: #fcfcfc;
+  --color-grey-100: #f8f8f8;
+  --color-grey-200: #e6e6e6;
+  --color-grey-300: #d5d5d5;
+  --color-grey-400: #b1b1b1;
+  --color-grey-500: #909090;
+  --color-grey-600: #6d6d6d;
+  --color-grey-700: #464646;
+  --color-grey-800: #222222;
+  --color-grey-900: #000000;
+
+  --color-green-50: #f5fbf6;
+  --color-green-75: #e6f5e9;
+  --color-green-100: #b0deb9;
+  --color-green-200: #8acf98;
+  --color-green-300: #54b968;
+  --color-green-400: #33ab4a;
+  --color-green-500: #00961d;
+  --color-green-600: #00891b;
+  --color-green-700: #006b15;
+  --color-green-800: #005310;
+  --color-green-900: #003f0d;
+
+  --color-red-50: #fef6f6;
+  --color-red-75: #fee8e8;
+  --color-red-100: #fcb9b9;
+  --color-red-200: #fa9797;
+  --color-red-300: #f86868;
+  --color-red-400: #f74a4a;
+  --color-red-500: #f51d1d;
+  --color-red-600: #df1a1a;
+  --color-red-700: #ae1515;
+  --color-red-800: #871010;
+  --color-red-900: #670c0c;
+
+  --color-yellow-50: #fffcf6;
+  --color-yellow-75: #fff8e8;
+  --color-yellow-100: #ffe9b8;
+  --color-yellow-200: #ffde96;
+  --color-yellow-300: #ffcf66;
+  --color-yellow-400: #ffc549;
+  --color-yellow-500: #ffb71b;
+  --color-yellow-600: #e8a719;
+  --color-yellow-700: #b58213;
+  --color-yellow-800: #8c650f;
+  --color-yellow-900: #6b4d0b;
+
+  --color-orange-50: #fffbf7;
+  --color-orange-75: #fff2e6;
+  --color-orange-100: #ffd7b0;
+  --color-orange-200: #ffc48a;
+  --color-orange-300: #ffa954;
+  --color-orange-400: #ff9933;
+  --color-orange-500: #ff7f00;
+  --color-orange-600: #e87400;
+  --color-orange-700: #b55a00;
+  --color-orange-800: #8c4600;
+  --color-orange-900: #6b3500;
+
+  --color-purple-50: #f9f5fb;
+  --color-purple-75: #f0e6f5;
+  --color-purple-100: #cfb1df;
+  --color-purple-200: #b88cd0;
+  --color-purple-300: #9857bb;
+  --color-purple-400: #8436ad;
+  --color-purple-500: #650499;
+  --color-purple-600: #5c048b;
+  --color-purple-700: #48036d;
+  --color-purple-800: #370254;
+  --color-purple-900: #2a0240;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Inter, -apple-system, sans-serif;
 }
