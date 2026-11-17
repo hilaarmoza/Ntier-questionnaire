@@ -13,7 +13,8 @@ import {
 } from "@/lib/data";
 import { RecordCard } from "./RecordCard";
 import { DelegateModal } from "./DelegateModal";
-import { HsChip, MappedBadge, StatusPill, siteLabel } from "./ui";
+import { ReviewScreen, entityOutstanding } from "./ReviewScreen";
+import { HsChip, MappedBadge, StatusPill, componentTitle, siteLabel } from "./ui";
 
 export default function Portal() {
   const [family, setFamily] = useState<SupplierFamily>(seedFamily);
@@ -23,6 +24,9 @@ export default function Portal() {
   const [delegations, setDelegations] = useState<Delegation[]>([]);
   const [delegateOpen, setDelegateOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [reviewing, setReviewing] = useState(false);
+  // Each legal entity is its own questionnaire, reviewed and submitted separately.
+  const [submittedIds, setSubmittedIds] = useState<string[]>([]);
 
   const selectedEntity = family.entities.find((e) => e.id === selectedEntityId);
   const expandedProduct = selectedEntity?.products.find((p) => p.id === expandedProductId);
@@ -42,16 +46,24 @@ export default function Portal() {
   };
 
   const selectEntity = (entityId: string) => {
+    setReviewing(false);
     setSelectedEntityId(entityId);
     setExpandedProductId(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const openProduct = (productId: string) => {
+    setReviewing(false);
     setExpandedProductId(productId);
     setTimeout(() => {
       document.getElementById(`product-${productId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 60);
+  };
+
+  const openReview = () => {
+    setReviewing(true);
+    setExpandedProductId(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const scrollToComponent = (componentId: string) => {
@@ -110,7 +122,22 @@ export default function Portal() {
         />
 
         <main className="min-w-0 flex-1 px-6 py-8 lg:px-10">
-          {selectedEntity ? (
+          {selectedEntity && (reviewing || submittedIds.includes(selectedEntity.id)) ? (
+            <ReviewScreen
+              buyer={family.buyer}
+              entity={selectedEntity}
+              submitted={submittedIds.includes(selectedEntity.id)}
+              nextEntity={family.entities.find((e) => e.id !== selectedEntity.id && !submittedIds.includes(e.id))}
+              onBack={() => setReviewing(false)}
+              onEditProduct={(productId) => openProduct(productId)}
+              onOpenEntity={selectEntity}
+              onSubmit={() => {
+                setSubmittedIds((ids) => [...ids, selectedEntity.id]);
+                setReviewing(false);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          ) : selectedEntity ? (
             <div className="mx-auto max-w-4xl">
               <div className="mb-4">
                 <button
@@ -124,28 +151,42 @@ export default function Portal() {
                 </button>
                 <h1 className="mt-1 text-xl font-bold tracking-tight text-bluegrey-900">{selectedEntity.name}</h1>
                 <p className="text-sm text-bluegrey-400">
-                  {selectedEntity.city}, {selectedEntity.country} · {selectedEntity.products.length} product
-                  {selectedEntity.products.length > 1 ? "s" : ""} sold to {family.buyer}. Select a product to review
-                  and confirm it.
+                  {selectedEntity.city}, {selectedEntity.country}
+                </p>
+              </div>
+              <div className="mb-3 mt-6">
+                <h2 className="text-base font-semibold text-bluegrey-800">
+                  Products you supply to {family.buyer} ({selectedEntity.products.length})
+                </h2>
+                <p className="mt-0.5 text-sm text-bluegrey-500">
+                  Our records show {selectedEntity.name} has been providing these products to {family.buyer}. Open
+                  each one to confirm the details are correct.
                 </p>
               </div>
               <div className="space-y-3">
-                {selectedEntity.products.map((product) => (
-                  <ProductAccordion
-                    key={product.id}
-                    product={product}
-                    expanded={expandedProductId === product.id}
-                    onToggle={() =>
-                      expandedProductId === product.id ? setExpandedProductId(null) : openProduct(product.id)
-                    }
-                    onUpdate={(fn) => updateProduct(product.id, fn)}
-                    onFlash={flash}
-                  />
-                ))}
+                {selectedEntity.products.map((product, i) => {
+                  // The last product has no next button: the submit bar sits right below it.
+                  const nextProduct = selectedEntity.products[i + 1];
+                  return (
+                    <ProductAccordion
+                      key={product.id}
+                      product={product}
+                      position={`Product ${i + 1} of ${selectedEntity.products.length}`}
+                      next={nextProduct && { name: nextProduct.name, go: () => openProduct(nextProduct.id) }}
+                      expanded={expandedProductId === product.id}
+                      onToggle={() =>
+                        expandedProductId === product.id ? setExpandedProductId(null) : openProduct(product.id)
+                      }
+                      onUpdate={(fn) => updateProduct(product.id, fn)}
+                      onFlash={flash}
+                    />
+                  );
+                })}
               </div>
+              <SubmitBar entity={selectedEntity} onReview={openReview} />
             </div>
           ) : (
-            <EntityPicker family={family} onSelect={selectEntity} />
+            <EntityPicker family={family} submittedIds={submittedIds} onSelect={selectEntity} />
           )}
         </main>
       </div>
@@ -316,9 +357,7 @@ function Sidebar({
                               >
                                 {componentDot(c)}
                                 <span className={`truncate ${c.status === "rejected" ? "line-through" : ""}`}>
-                                  {c.fields.mpnDescription ||
-                                    c.fields.mpn ||
-                                    (c.supplierAdded ? "New component" : c.hs?.description || "Mapped component")}
+                                  {componentTitle(c)}
                                 </span>
                               </button>
                             ))}
@@ -386,7 +425,6 @@ function InviteScreen({ family, onLogin }: { family: SupplierFamily; onLogin: ()
         >
           Open questionnaire
         </button>
-        <p className="mt-3 text-center text-xs text-bluegrey-400">Demo prototype - no real authentication.</p>
       </div>
     </div>
   );
@@ -394,7 +432,15 @@ function InviteScreen({ family, onLogin }: { family: SupplierFamily; onLogin: ()
 
 /* ---------------- Step 2: pick a legal entity ---------------- */
 
-function EntityPicker({ family, onSelect }: { family: SupplierFamily; onSelect: (id: string) => void }) {
+function EntityPicker({
+  family,
+  submittedIds,
+  onSelect,
+}: {
+  family: SupplierFamily;
+  submittedIds: string[];
+  onSelect: (id: string) => void;
+}) {
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="text-xl font-bold tracking-tight text-bluegrey-900">Select a legal entity to begin</h1>
@@ -423,9 +469,13 @@ function EntityPicker({ family, onSelect }: { family: SupplierFamily; onSelect: 
                 <span className="text-bluegrey-500">
                   {total} product{total > 1 ? "s" : ""} sold to {family.buyer}
                 </span>
-                <span className={`font-medium ${done === total ? "text-green-600" : "text-yellow-600"}`}>
-                  {done}/{total} complete
-                </span>
+                {submittedIds.includes(e.id) ? (
+                  <span className="font-medium text-green-600">Submitted ✓</span>
+                ) : (
+                  <span className={`font-medium ${done === total ? "text-green-600" : "text-yellow-600"}`}>
+                    {done}/{total} complete
+                  </span>
+                )}
               </div>
             </button>
           );
@@ -437,14 +487,50 @@ function EntityPicker({ family, onSelect }: { family: SupplierFamily; onSelect: 
 
 /* ---------------- Product accordion: expands in place ---------------- */
 
+type NextStep = { name: string; go: () => void };
+
+/* Sits under the last product: this entity's questionnaire is submitted on its own. */
+function SubmitBar({ entity, onReview }: { entity: LegalEntity; onReview: () => void }) {
+  const left = entityOutstanding(entity);
+  return (
+    <div
+      className={`mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl p-5 ring-1 ${
+        left === 0 ? "bg-green-50 ring-green-200" : "bg-white ring-bluegrey-200"
+      }`}
+    >
+      <div className="text-sm">
+        <div className="font-semibold text-bluegrey-900">
+          {left === 0 ? "Everything is confirmed" : "Finish confirming to submit"}
+        </div>
+        <div className="text-bluegrey-500">
+          {left === 0
+            ? `Review the ${entity.name} questionnaire and submit it.`
+            : `${left} item${left > 1 ? "s" : ""} still to confirm before you can submit ${entity.name}.`}
+        </div>
+      </div>
+      <button
+        onClick={onReview}
+        disabled={left > 0}
+        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-bluegrey-300"
+      >
+        Review and submit →
+      </button>
+    </div>
+  );
+}
+
 function ProductAccordion({
   product,
+  position,
+  next,
   expanded,
   onToggle,
   onUpdate,
   onFlash,
 }: {
   product: Product;
+  position: string;
+  next?: NextStep;
   expanded: boolean;
   onToggle: () => void;
   onUpdate: (fn: (p: Product) => Product) => void;
@@ -482,6 +568,24 @@ function ProductAccordion({
       {expanded && (
         <div className="border-t border-bluegrey-100 p-5 pt-4">
           <ProductDetail product={product} onUpdate={onUpdate} onFlash={onFlash} />
+        </div>
+      )}
+
+      {/* Once the product is confirmed, point the supplier to what comes next
+          instead of leaving them to find the next card on their own. */}
+      {expanded && product.confirmed && next && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-bluegrey-100 px-5 py-3">
+          <span className="text-sm text-bluegrey-500">
+            {position}
+            {confirmedComps < comps.length &&
+              ` · ${comps.length - confirmedComps} component${comps.length - confirmedComps > 1 ? "s" : ""} still to review, you can come back later`}
+          </span>
+          <button
+            onClick={next.go}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500"
+          >
+            Next product: {next.name} →
+          </button>
         </div>
       )}
     </div>
@@ -644,12 +748,7 @@ function ComponentCard({
 }) {
   const c = component;
   const [confirmingReject, setConfirmingReject] = useState(false);
-  // A supplier-added component is "New component" until it's named. Blueprint
-  // components always carry an identity - at minimum their HS part type.
-  const title =
-    c.fields.mpnDescription ||
-    c.fields.mpn ||
-    (c.supplierAdded ? "New component" : c.hs?.description || "Mapped component");
+  const title = componentTitle(c);
 
   if (c.status === "rejected") {
     return (

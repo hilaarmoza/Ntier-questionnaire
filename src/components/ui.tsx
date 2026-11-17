@@ -1,4 +1,4 @@
-import type { HsCode, RecordStatus, SiteValue } from "@/lib/data";
+import type { ComponentRecord, HsCode, RecordStatus, SiteValue } from "@/lib/data";
 
 export function HsChip({ hs }: { hs: HsCode }) {
   // UI convention: never show a bare HS code - always code + description.
@@ -40,13 +40,19 @@ export function MappedBadge({ mapped, supplierAdded }: { mapped: boolean; suppli
     );
   return mapped ? (
     <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
-      Mapped from trade data
+      Mapped via Sayari
     </span>
   ) : (
     <span className="inline-flex items-center rounded-full bg-bluegrey-100 px-2.5 py-0.5 text-xs font-medium text-bluegrey-500 ring-1 ring-inset ring-bluegrey-200">
       Unmapped - details required
     </span>
   );
+}
+
+// A supplier-added component is "New component" until it's named. Blueprint
+// components always carry an identity - at minimum their HS part type.
+export function componentTitle(c: ComponentRecord): string {
+  return c.fields.mpnDescription || c.fields.mpn || (c.supplierAdded ? "New component" : c.hs?.description || "Mapped component");
 }
 
 export function siteLabel(site: SiteValue): string {
